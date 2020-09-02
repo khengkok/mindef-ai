@@ -43,32 +43,33 @@ class ConvSTAE(gluon.nn.HybridBlock):
 # Train the autoencoder
 def train(batch_size, ctx, num_epochs, path, lr=1e-4, wd=1e-5, params_file="autoencoder_ucsd_convstae.params"):
 
-  # Dataloader for training dataset
-  dataloader = utils.create_dataset_stacked_images(path, batch_size, shuffle=True, augment=True)
+    print('training..')
+    # Dataloader for training dataset
+    dataloader = utils.create_dataset_stacked_images(path, batch_size, shuffle=True, augment=True)
 
-  # Get model
-  model = ConvSTAE()
-  model.hybridize()
-  model.collect_params().initialize(mx.init.Xavier(), ctx=mx.gpu())
+    # Get model
+    model = ConvSTAE()
+    model.hybridize()
+    model.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
 
-  # Loss
-  l2loss = gluon.loss.L2Loss()
-  optimizer = gluon.Trainer(model.collect_params(), 'adam', {'learning_rate': lr, 'wd': wd, 'epsilon':1e-6})
+    # Loss
+    l2loss = gluon.loss.L2Loss()
+    optimizer = gluon.Trainer(model.collect_params(), 'adam', {'learning_rate': lr, 'wd': wd, 'epsilon':1e-6})
 
-  # start the training loop
-  for epoch in range(num_epochs):
-    for image in dataloader:
-        image = image.as_in_context(ctx)
+    # start the training loop
+    for epoch in range(num_epochs):
+        for image in dataloader:
+            image = image.as_in_context(ctx)
 
-        with mx.autograd.record():
-            reconstructed = model(image)
-            loss = l2loss(reconstructed, image)
+            with mx.autograd.record():
+                reconstructed = model(image)
+                loss = l2loss(reconstructed, image)
 
-        loss.backward()
-        optimizer.step(batch_size)
-        
-    print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, num_epochs, mx.nd.mean(loss).asscalar()))
+            loss.backward()
+            optimizer.step(batch_size)
 
-  model.save_parameters(params_file)
+        print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, num_epochs, mx.nd.mean(loss).asscalar()))
 
-  return model, params_file
+    model.save_parameters(params_file)
+
+    return model, params_file

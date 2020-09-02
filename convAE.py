@@ -34,34 +34,34 @@ class ConvolutionalAutoencoder(gluon.nn.HybridBlock):
 
 # Train the autoencoder
 def train(batch_size, ctx, num_epochs, path, lr=1e-4, wd=1e-5, params_file="autoencoder_ucsd_convae.params"):
+    print('training')
+    # Dataloader for training dataset
+    dataloader = utils.create_dataset(path, batch_size, shuffle=True)
 
-  # Dataloader for training dataset
-  dataloader = utils.create_dataset(path, batch_size, shuffle=True)
+    # Get model
+    model = ConvolutionalAutoencoder()
+    model.hybridize()
 
-  # Get model
-  model = ConvolutionalAutoencoder()
-  model.hybridize()
+    # Initialiize
+    model.collect_params().initialize(mx.init.Xavier('gaussian'), ctx=ctx)
 
-  # Initialiize
-  model.collect_params().initialize(mx.init.Xavier('gaussian'), ctx=ctx)
-  
-  # Loss
-  l2loss = gluon.loss.L2Loss()
-  optimizer = gluon.Trainer(model.collect_params(), 'adam', {'learning_rate': lr, 'wd': wd})
+    # Loss
+    l2loss = gluon.loss.L2Loss()
+    optimizer = gluon.Trainer(model.collect_params(), 'adam', {'learning_rate': lr, 'wd': wd})
 
-  # Start training loop
-  for epoch in range(num_epochs):
-    for image in dataloader:
-        image = image.as_in_context(ctx)
+    # Start training loop
+    for epoch in range(num_epochs):
+        for image in dataloader:
+            image = image.as_in_context(ctx)
 
-        with mx.autograd.record():
-            reconstructed = model(image)
-            loss = l2loss(reconstructed, image)
+            with mx.autograd.record():
+                reconstructed = model(image)
+                loss = l2loss(reconstructed, image)
 
-        loss.backward()
-        optimizer.step(batch_size)
-    print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, num_epochs, mx.nd.mean(loss).asscalar()))
+            loss.backward()
+            optimizer.step(batch_size)
+        print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, num_epochs, mx.nd.mean(loss).asscalar()))
 
-  # Save parameters
-  model.save_parameters(params_file)
-  return model, params_file
+        # Save parameters
+        model.save_parameters(params_file)
+    return model, params_file
