@@ -6,9 +6,29 @@ import os
 import zipfile
 import wget
 import tensorflow as tf
+import numpy as np
+from scipy import signal
 
 dataset_root_dir = 'UCSD_Anomaly_Dataset.v1p2'
 
+root_logdir = os.path.join(os.curdir, "tb_logs")
+
+def get_run_logdir():
+    import time
+    run_id = time.strftime("run_%Y_%m_%d-%H_%M_%S")
+    return os.path.join(root_logdir, run_id)
+
+def plot_training_loss(history):
+
+    loss = history.history['loss']
+    val_loss = history.history['val_loss']
+    epochs = range(1, len(loss) + 1)
+    plt.plot(epochs, loss, 'bo', label='Training loss')
+    plt.plot(epochs, val_loss, 'b', label='Validation loss')
+    plt.title('Training and validation loss')
+    plt.legend()
+    plt.show()
+    
 def create_gif(image_folder, output_file, img_type='png',):
     # Create the frames
     frames = []
@@ -66,6 +86,111 @@ def download_data(url, extract=True, force=False):
         with zipfile.ZipFile(filename, 'r') as zip:
             zip.extractall('.')
 
+def show_reconstructions(model, image):
+    im = Image.open(image)
+    im = np.array(im.resize((100,100)))/255.
+    im = np.expand_dims(np.expand_dims(im, axis=0), axis=3)
+    reconstructed = model.predict(im)
+    plt.subplot(1, 2, 1)
+    plt.imshow(im[0,:,:,0], cmap=plt.cm.gray, interpolation='nearest')
+    #plt.xlabel('original')
+    plt.title('original')
+    plt.axis("off")
+    plt.subplot(1, 2, 2)
+    plt.imshow(reconstructed[0,:,:,0], cmap=plt.cm.gray, interpolation='nearest')
+    #plt.xlabel('reconstructed')
+    plt.title('reconstructed')
+    plt.axis("off")
+    
+def plot_reconstruction_loss(img, losses, counter):
+    if not os.path.exists('losses'):
+        os.mkdir('losses')
+    plt.ioff()
+    fig = plt.figure(figsize=(6, 2))
+    #plt.yticks(np.arange(0, 0.03, step=0.005))
+    x = np.arange(1,201)
+    y = np.zeros(200)
+    # show original image
+    fig.add_subplot(121)
+    plt.title(f'frame {counter}')
+    plt.set_cmap('gray')
+    plt.imshow(img)
+
+    fig.add_subplot(122)
+    #plt.yticks(np.arange(0, 0.015, step=0.005))
+    plt.ylim(0,0.015)
+    plt.title('reconstruction loss')
+    plt.plot(x,y)
+    plt.plot(losses)
+
+    #plt.show() 
+    
+    fig.savefig('losses/{:0>3d}.png'.format(counter))
+    plt.ion()
+    plt.close()
+  
+    
+def create_losses_animation(model, dataset, gif_file):
+    mse = tf.keras.losses.MeanSquaredError()
+    losses = []
+    counter = 0
+    for image, _  in dataset:
+        counter = counter + 1
+        output = model.predict(image)
+        loss = mse(image, output)
+        losses.append(loss)
+        plot_reconstruction_loss(image[0,:,:,0], losses, counter)
+    
+    create_gif('losses', gif_file)
+    
+def plot_comparisons(img, output, diff, H, threshold, counter):
+    if not os.path.exists('images'):
+        os.mkdir('images')
+    plt.ioff()
+    #print('inside plot, imgshape {}'.format(img.shape))
+    fig, (ax0, ax1, ax2,ax3) = plt.subplots(ncols=4, figsize=(10, 5))
+    ax0.set_axis_off()
+    ax1.set_axis_off()
+    ax2.set_axis_off()
+    
+    ax0.set_title('input image')
+    ax1.set_title('reconstructed image')
+    ax2.set_title('diff ')
+    ax3.set_title('anomalies')
+    #ax4.set_title('H')
+    ax0.imshow(img, cmap=plt.cm.gray, interpolation='nearest') 
+    ax1.imshow(output, cmap=plt.cm.gray, interpolation='nearest')   
+    ax2.imshow(diff, cmap=plt.cm.viridis, vmin=0, vmax=255, interpolation='nearest')  
+    ax3.imshow(img, cmap=plt.cm.gray, interpolation='nearest')
+    #ax4.imshow(H, cmap=plt.cm.gray, interpolation='nearest')
+    
+    x,y = np.where(H > threshold)
+    ax3.scatter(y,x,color='red',s=0.1) 
+
+    plt.axis('off')
+    
+    fig.savefig('images/{:0>3d}.png'.format(counter))
+    plt.close()
+    plt.ion()
+    
+def identify_anomaly(model, dataset, gif_file, threshold=4):
+    threshold = threshold*255
+    counter = 0;
+    for image, _  in dataset:
+        counter = counter + 1
+        output = model.predict(image)
+        output = tf.multiply(output,255.)
+        img = tf.multiply(tf.cast(image, tf.float32), 255.)
+        diff = tf.abs(tf.subtract(output,img))
+        tmp = diff[0,:,:,0]
+        #print(tmp)
+        H = signal.convolve2d(tmp, np.ones((4,4)), mode='same')
+        #print(H)
+        plot_comparisons(img[0,:,:,0], output[0,:,:,0], diff[0,:,:,0], H, threshold, counter)
+
+    create_gif('images', gif_file)
+    
+    
 if __name__ == '__main__':
     
     image_folder = r'C:\Users\kheng\.keras\datasets\UCSD_Anomaly_Dataset.v1p2\UCSDped1\Test\Test024'
