@@ -21,11 +21,11 @@ def get_run_logdir():
 def plot_training_loss(history):
 
     loss = history.history['loss']
-    val_loss = history.history['val_loss']
+    #val_loss = history.history['val_loss']
     epochs = range(1, len(loss) + 1)
     plt.plot(epochs, loss, 'bo', label='Training loss')
-    plt.plot(epochs, val_loss, 'b', label='Validation loss')
-    plt.title('Training and validation loss')
+    #plt.plot(epochs, val_loss, 'b', label='Validation loss')
+    plt.title('Training loss')
     plt.legend()
     plt.show()
     
