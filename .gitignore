@@ -3,3 +3,6 @@
 images/
 tb_logs/
 losses/
+*_dataset
+trained_model
+__pycache__

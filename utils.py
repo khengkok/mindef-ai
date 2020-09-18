@@ -9,7 +9,7 @@ import tensorflow as tf
 import numpy as np
 from scipy import signal
 
-dataset_root_dir = 'UCSD_Anomaly_Dataset.v1p2'
+#dataset_root_dir = 'UCSD_Anomaly_Dataset.v1p2'
 
 root_logdir = os.path.join(os.curdir, "tb_logs")
 
@@ -21,10 +21,12 @@ def get_run_logdir():
 def plot_training_loss(history):
 
     loss = history.history['loss']
-    #val_loss = history.history['val_loss']
+    if 'val_loss' in history.history:
+        val_loss = history.history['val_loss']
     epochs = range(1, len(loss) + 1)
     plt.plot(epochs, loss, 'bo', label='Training loss')
-    #plt.plot(epochs, val_loss, 'b', label='Validation loss')
+    if val_loss:
+        plt.plot(epochs, val_loss, 'b', label='Validation loss')
     plt.title('Training loss')
     plt.legend()
     plt.show()
@@ -74,9 +76,9 @@ def display_images(image_folder, image_range=(1,10), max_per_row=5):
     #fig.save('fig.png')
     plt.show()
 
-def download_data(url, extract=True, force=False):
+def download_data(data_dir, url, extract=True, force=False):
     # if not force download and directory already exists
-    if not force and os.path.exists(dataset_root_dir):
+    if not force and os.path.exists(data_dir):
         print('dataset directory already exists, skip download')
         return
 
@@ -84,7 +86,7 @@ def download_data(url, extract=True, force=False):
     print(filename)
     if extract: 
         with zipfile.ZipFile(filename, 'r') as zip:
-            zip.extractall('.')
+            zip.extractall(data_dir)
 
 def show_reconstructions(model, image):
     im = Image.open(image)
