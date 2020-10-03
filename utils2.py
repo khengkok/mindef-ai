@@ -11,15 +11,6 @@ def get_run_logdir():
     run_id = time.strftime("run_%Y_%m_%d-%H_%M_%S")
     return os.path.join(root_logdir, run_id)
 
-def plot_training_loss(history):
-    loss = history.history['loss']
-    #val_loss = history.history['val_loss']
-    epochs = range(1, len(loss) + 1)
-    plt.plot(epochs, loss, 'bo', label='Training loss')
-    #plt.plot(epochs, val_loss, 'b', label='Validation loss')
-    plt.title('Training loss')
-    plt.legend()
-    plt.show()
     
 def draw_anomaly(y_true, error, threshold):
         groupsDF = pd.DataFrame({'error': error,

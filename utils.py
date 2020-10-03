@@ -4,14 +4,29 @@ import matplotlib.pyplot as plt
 import math
 import os
 import zipfile
-import wget
 import tensorflow as tf
 import numpy as np
 from scipy import signal
+from os import system
 
-#dataset_root_dir = 'UCSD_Anomaly_Dataset.v1p2'
-
+try:
+    import wget
+    print('\nWget Module was installed')
+except ImportError:
+    system("pip install wget")
+    import wget
+    
+    
 root_logdir = os.path.join(os.curdir, "tb_logs")
+
+def fix_cudnn_bug(): 
+    # during training, tf will throw cudnn initialization error: failed to get convolution algos
+    # the following codes somehow fix it
+    config = tf.compat.v1.ConfigProto()
+    config.gpu_options.allow_growth = True
+    config.log_device_placement = False
+    sess = tf.compat.v1.Session(config=config)
+    tf.compat.v1.keras.backend.set_session(sess)
 
 def get_run_logdir():
     import time
@@ -19,12 +34,11 @@ def get_run_logdir():
     return os.path.join(root_logdir, run_id)
 
 def plot_training_loss(history):
-
-    loss = history.history['loss']
-    if 'val_loss' in history.history:
-        val_loss = history.history['val_loss']
-    epochs = range(1, len(loss) + 1)
-    plt.plot(epochs, loss, 'bo', label='Training loss')
+    train_loss = history['loss']
+    if 'val_loss' in history:
+        val_loss = history['val_loss']
+    epochs = range(1, len(train_loss) + 1)
+    plt.plot(epochs, train_loss, 'bo', label='Traintrain_lossing loss')
     if val_loss:
         plt.plot(epochs, val_loss, 'b', label='Validation loss')
     plt.title('Training loss')
@@ -49,15 +63,16 @@ def create_gif(image_folder, output_file, img_type='png',):
 
 def plot_image(image):
     '''if image is a file, then open the file first'''
+    print(type(image))
     if type(image) == str:
-        image = Image.open(image)
+        img = Image.open(image)
     elif type(image) == tf.python.framework.ops.EagerTensor:
         if len(image.shape) == 4:  # the tensor with batch axis
-            image =  image[0][:,:,0]
+            img =  image[0][:,:,0]
         else:
-            image = image[:,:,0]
+            img = image[:,:,0]
 
-    plt.imshow(image, cmap=plt.cm.gray, interpolation='nearest')
+    plt.imshow(img, cmap=plt.cm.gray, interpolation='nearest')
     plt.axis("off")
     
     
