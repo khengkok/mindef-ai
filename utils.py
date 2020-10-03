@@ -8,6 +8,10 @@ import tensorflow as tf
 import numpy as np
 from scipy import signal
 from os import system
+import urllib.request
+
+from tqdm import tqdm
+
 
 try:
     import wget
@@ -63,7 +67,7 @@ def create_gif(image_folder, output_file, img_type='png',):
 
 def plot_image(image):
     '''if image is a file, then open the file first'''
-    print(type(image))
+    
     if type(image) == str:
         img = Image.open(image)
     elif type(image) == tf.python.framework.ops.EagerTensor:
@@ -91,17 +95,25 @@ def display_images(image_folder, image_range=(1,10), max_per_row=5):
     #fig.save('fig.png')
     plt.show()
 
+class DownloadProgressBar(tqdm):
+    def update_to(self, b=1, bsize=1, tsize=None):
+        if tsize is not None:
+            self.total = tsize
+        self.update(b * bsize - self.n)
+
+
 def download_data(data_dir, url, extract=True, force=False):
     # if not force download and directory already exists
     if not force and os.path.exists(data_dir):
         print('dataset directory already exists, skip download')
         return
-
-    filename = wget.download(url)
-    print(filename)
-    if extract: 
-        with zipfile.ZipFile(filename, 'r') as zip:
-            zip.extractall(data_dir)
+    with DownloadProgressBar(unit='B', unit_scale=True,
+                             miniters=1, desc=url.split('/')[-1]) as t:
+        filename, _ = urllib.request.urlretrieve(url, reporthook=t.update_to)
+        if extract: 
+            with zipfile.ZipFile(filename, 'r') as zip:
+                zip.extractall(data_dir)
+        os.remove(filename)
 
 def show_reconstructions(model, image):
     im = Image.open(image)
@@ -207,7 +219,22 @@ def identify_anomaly(model, dataset, gif_file, threshold=4):
 
     create_gif('images', gif_file)
     
-    
+
+
+
+class DownloadProgressBar(tqdm):
+    def update_to(self, b=1, bsize=1, tsize=None):
+        if tsize is not None:
+            self.total = tsize
+        self.update(b * bsize - self.n)
+
+
+def download_url(url):
+    with DownloadProgressBar(unit='B', unit_scale=True,
+                             miniters=1, desc=url.split('/')[-1]) as t:
+        urllib.request.urlretrieve(url, reporthook=t.update_to)
+        
+        
 if __name__ == '__main__':
     
     image_folder = r'C:\Users\kheng\.keras\datasets\UCSD_Anomaly_Dataset.v1p2\UCSDped1\Test\Test024'
