@@ -12,14 +12,6 @@ import urllib.request
 
 from tqdm import tqdm
 
-
-try:
-    import wget
-    print('\nWget Module was installed')
-except ImportError:
-    system("pip install wget")
-    import wget
-    
     
 root_logdir = os.path.join(os.curdir, "tb_logs")
 
@@ -38,12 +30,13 @@ def get_run_logdir():
     return os.path.join(root_logdir, run_id)
 
 def plot_training_loss(history):
-    train_loss = history['loss']
-    if 'val_loss' in history:
+    train_loss = history.history['loss']
+    val_loss = None
+    if 'val_loss' in history.history:
         val_loss = history['val_loss']
     epochs = range(1, len(train_loss) + 1)
     plt.plot(epochs, train_loss, 'bo', label='Traintrain_lossing loss')
-    if val_loss:
+    if val_loss is not None:
         plt.plot(epochs, val_loss, 'b', label='Validation loss')
     plt.title('Training loss')
     plt.legend()
